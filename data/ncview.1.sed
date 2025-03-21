@@ -3,7 +3,7 @@
 ncview \- graphically display netCDF files under X windows
 .SH SYNOPSIS
 .B ncview
-[-beep] [-copying] [-frames] [-warranty] [-private] [-ncolors XX] [-extrainfo] [-mtitle "title"] [-minmax fast | med | slow | all] datafiles ...
+[\-beep] [\-copying] [\-frames] [\-warranty] [\-private] [\-ncolors XX] [\-extrainfo] [\-mtitle "title"] [\-minmax fast | med | slow | all] datafiles ...
 .PP
 .SH DESCRIPTION
 .I Ncview
@@ -305,7 +305,7 @@ the name of a directory which contains additional colormap
 files.
 If that is not defined, then colormaps are sought in
 the user's home directory, and in the directory which
-.i ncview
+.I ncview
 was run from.
 
 Colormap files have 256 lines, each consisting of

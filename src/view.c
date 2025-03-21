@@ -1,6 +1,6 @@
 /*
  * Ncview by David W. Pierce.  A visual netCDF file viewer.
- * Copyright (C) 1993 through 2010 David W. Pierce
+ * Copyright (C) 1993 through 2024 David W. Pierce
  *
  * This program  is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as 
@@ -16,9 +16,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * David W. Pierce
- * 6259 Caminito Carrean
- * San Diego, CA   92122
- * pierce@cirrus.ucsd.edu
+ * davidwilliampierce@gmail.com
  */
 
 /******************************************************************************
@@ -196,7 +194,7 @@ set_scan_variable( NCVar *var )
 		 * the previous scan place.
 		 */
 		if( options.debug )
-			fprintf( stderr, "...determing scan axes (PREVIOUS)\n" );
+			fprintf( stderr, "...determining scan axes (PREVIOUS)\n" );
 		determine_scan_axes( new_view, var, old_view );
 		if( var->effective_dimensionality == 1 ) {
 			view = new_view;
@@ -1963,7 +1961,7 @@ calculate_blowup( View *view, NCVar *var, int val_to_set_to )
 draw_file_info( NCVar *var )
 {
 	char	*title, *units, *var_long_name;
-	char	range_label[256], temp_label[256];
+	char	range_label[256], temp_label[600];
 
 	title = fi_title( var->first_file->id );
 	if( title == NULL )
@@ -1999,7 +1997,7 @@ draw_file_info( NCVar *var )
 					var->global_max,
 					limit_string(units) );
 		}
-	snprintf( temp_label, 255, "displayed range: %s", range_label );
+	snprintf( temp_label, 599, "displayed range: %s", range_label );
 	in_set_label( LABEL_DATA_EXTREMA, temp_label );
 
 	var_long_name = fi_long_var_name( view->variable->first_file->id, 
@@ -2008,17 +2006,17 @@ draw_file_info( NCVar *var )
 		snprintf( temp_label, 255, "variable=%s", limit_string(view->variable->name) );
 		in_set_label( LABEL_SCANVAR_NAME, temp_label );
 		if( options.want_extra_info ) {
-			snprintf( temp_label, 255, "%s (%s)", limit_string(view->variable->name), 
+			snprintf( temp_label, 599, "%s (%s)", limit_string(view->variable->name), 
 								range_label );
 			in_set_label( LABEL_CCINFO_1, temp_label );
 			}
 		}
 	else
 		{
-		snprintf( temp_label, 255, "displaying %s", limit_string(var_long_name) );
+		snprintf( temp_label, 599, "displaying %s", limit_string(var_long_name) );
 		in_set_label( LABEL_SCANVAR_NAME, temp_label );
 		if( options.want_extra_info ) {
-			snprintf( temp_label, 255, "%s (%s)",  limit_string(var_long_name), range_label );
+			snprintf( temp_label, 599, "%s (%s)",  limit_string(var_long_name), range_label );
 			in_set_label( LABEL_CCINFO_1, temp_label );
 			}
 		}
@@ -2144,7 +2142,7 @@ view_report_position( int x, int y, unsigned int button_mask )
 	int	type, has_bounds, i, x_is_mapped, y_is_mapped;
 	float	val;
 	double	new_dimval, bound_min, bound_max;
-	char	current_value_label[80], temp_string[1024];
+	char	current_value_label[500], temp_string[1024];
 	char	xdim_str[80], ydim_str[80];
 	NCDim	*xdim, *ydim;
 	size_t	virt_cursor_pos[MAX_NC_DIMS];
@@ -2226,7 +2224,7 @@ view_report_position( int x, int y, unsigned int button_mask )
 	else
 		strncpy( ydim_str, temp_string, 80 );
 
-	snprintf( current_value_label, 79, "Current: (i=%1ld, j=%1ld) %g (x=%s, y=%s)\n", 
+	snprintf( current_value_label, 499, "Current: (i=%1ld, j=%1ld) %g (x=%s, y=%s)\n", 
 				data_x, data_y, val, xdim_str, ydim_str );
 	in_set_label( LABEL_DATA_VALUE, current_value_label );
 }
@@ -2315,7 +2313,7 @@ view_construct_scalar_coord_str( char *str, int slen )
 	void
 view_report_position_vals( float xval, float yval, int plot_index )
 {
-	char	current_value_label[80], temp[80];
+	char	current_value_label[200], temp[80];
 	NCDim	*dim;
 
 	dim = plot_XY_dim[plot_index];
@@ -2323,7 +2321,7 @@ view_report_position_vals( float xval, float yval, int plot_index )
 	/* If the X dimension is timelike, consider formatting that value */
 	if( (dim != NULL) && dim->timelike && options.t_conv ) {
 		fmt_time( temp, 79, xval, dim, 1 );
-		snprintf( current_value_label, 79, "Current: x=%s, y=%g",
+		snprintf( current_value_label, 199, "Current: x=%s, y=%g",
 		                temp, yval );
 		}
 	else
@@ -3118,9 +3116,10 @@ view_change_transform( int delta )
 		options.transform = N_TRANSFORMS;
 
 	switch( options.transform ) {
-		case TRANSFORM_NONE: in_set_label( LABEL_TRANSFORM, "Linear" ); break;
-		case TRANSFORM_LOW : in_set_label( LABEL_TRANSFORM, "Low"    ); break;
-		case TRANSFORM_HI  : in_set_label( LABEL_TRANSFORM, "Hi"     ); break;
+		case TRANSFORM_NONE   : in_set_label( LABEL_TRANSFORM, "Linear" ); break;
+		case TRANSFORM_LOW    : in_set_label( LABEL_TRANSFORM, "Low"    ); break;
+		case TRANSFORM_HI     : in_set_label( LABEL_TRANSFORM, "Hi"     ); break;
+		case TRANSFORM_CENTER : in_set_label( LABEL_TRANSFORM, "Center" ); break;
 		default:
 			fprintf( stderr, "ncview: change_transform: unknown transform %d\n",
 				options.transform );

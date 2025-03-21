@@ -1,6 +1,6 @@
 /*
  * Ncview by David W. Pierce.  A visual netCDF file viewer.
- * Copyright (C) 1993 through 2015 David W. Pierce
+ * Copyright (C) 1993 through 2024 David W. Pierce
  *
  * This program  is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as 
@@ -16,9 +16,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * David W. Pierce
- * 6259 Caminito Carrean
- * San Diego, CA   92122
- * pierce@cirrus.ucsd.edu
+ * davidwilliampierce@gmail.com
  */
 
 /*****************************************************************************
@@ -36,14 +34,15 @@
 extern	NCVar   *variables;
 extern  Options options;
 
-void warn_about_char_dims();
-int safe_ncdimid( int fileid, char *dim_name1 );
-int netcdf_dimvar_id( int fileid, char *dim_name );
-int netcdf_get_att_util( int id, int varid, char *var_name, char *att_name, int expected_len, void *value );
-int nc_inq_varid_grp( int ncid, char *varname, int *varid, int *groupid );
-void varname_no_groups( char *varname, char *varname_sans_groups );
-char *ncview_groupname( int gid );
-char *ncview_varname( int gid, int varid );
+void 	warn_about_char_dims();
+int 	safe_ncdimid( int fileid, char *dim_name1 );
+int 	netcdf_dimvar_id( int fileid, char *dim_name, int *dimvar_gid );
+int 	netcdf_get_att_util( int id, int varid, char *var_name, char *att_name, int expected_len, void *value );
+int 	nc_inq_varid_grp( int ncid, char *varname, int *varid, int *groupid );
+char 	*ncview_groupname( int gid );
+char 	*ncview_varname( int gid, int varid );
+void 	nc_print_group_structure( int fileid );
+int 	nc_root_id_from_group_id( int gid );
 
 char *nc_type_to_string( nc_type type );
 
@@ -309,7 +308,7 @@ Stringlist *netcdf_scannable_dims( int fileid, char *var_name )
 		exit(-1);
 		}
 
-	varname_no_groups( var_name, var_name_ng );
+	varname_no_groups( var_name, var_name_ng, NULL );
 
 	err = nc_inq_var( gid, var_id, var_name_ng, &var_type, &n_dims, dim, &n_atts );
 	if( err != NC_NOERR ) {
@@ -359,7 +358,7 @@ int netcdf_fi_n_dims( int fileid, char *var_name )
 		}
 
 	/* Strip off leading group names */
-	varname_no_groups( var_name, var_name_nogroups );
+	varname_no_groups( var_name, var_name_nogroups, NULL );
 
 	err = nc_inq_var( groupid, varid, var_name_nogroups, &var_type, &n_dims, dim, &n_atts );
 	if( err != NC_NOERR ) {
@@ -372,7 +371,7 @@ int netcdf_fi_n_dims( int fileid, char *var_name )
 }
 
 /*******************************************************************************************/
-size_t netcdf_dim_size( fileid, dimid )
+size_t netcdf_dim_size( int fileid, int dimid )
 {
 	size_t	ret_val;
 	int	err;
@@ -411,7 +410,7 @@ size_t * netcdf_fi_var_size( int fileid, char *var_name )
 		}
 
 	/* Strip off leading group names */
-	varname_no_groups( var_name, var_name_nogroups );
+	varname_no_groups( var_name, var_name_nogroups, NULL );
 
 	err = nc_inq_var( groupid, varid, var_name_nogroups, &var_type, &n_dims, dim, &n_atts );
 	if( err != NC_NOERR ) {
@@ -431,12 +430,15 @@ size_t * netcdf_fi_var_size( int fileid, char *var_name )
 	return( ret_val );
 }
 
-/*******************************************************************************************/
+/*******************************************************************************************
+ * for the given variable, which has N dims, return the fully qualified name of the 
+ * "dim_id"'th dim (dim_id is an index from 0 to 1-NDIMS(var_name))
+ */
 char *netcdf_dim_id_to_name( int fileid, char *var_name, int dim_id )
 {
 	int	netcdf_dim_id, netcdf_var_id, gid;
 	int	n_dims, *dim, err, n_atts;
-	char	*dim_name, var_name_ng[MAX_NC_NAME];
+	char	*dim_name, var_name_ng[MAX_NC_NAME], groupname[MAX_NC_NAME], *fq_dim_name;
 	nc_type	var_type;
 
 	/* see notes under "netcdf_dim_name_to_id".  "dim_id" is NOT
@@ -450,7 +452,15 @@ char *netcdf_dim_id_to_name( int fileid, char *var_name, int dim_id )
 		exit(-1);
 		}
 
-	varname_no_groups( var_name, var_name_ng );
+	/* At this point fully qualified var name "var_name" lives in group "gid" with varid "netcdf_var_id" */
+
+	varname_no_groups( var_name, var_name_ng, groupname );
+	/*
+	printf( "VVVV %s %d netcdf_dim_id_to_name for dim var_name: >%s< var_name_ng: >%s< groupname: >%s<\n", 
+		__FILE__, __LINE__, 
+		var_name, var_name_ng, groupname );
+	*/
+
 
 	n_dims = fi_n_dims( gid, var_name_ng );
 	dim    = (int *)malloc( n_dims * sizeof( int ));
@@ -463,14 +473,39 @@ char *netcdf_dim_id_to_name( int fileid, char *var_name, int dim_id )
 		}
 
 	netcdf_dim_id = *(dim+dim_id);
-	dim_name = (char *)malloc( MAX_NC_NAME ); /* defined in netcdf.h */
+	dim_name    = (char *)malloc( MAX_NC_NAME ); /* defined in netcdf.h */
+	fq_dim_name = (char *)malloc( MAX_NC_NAME ); /* defined in netcdf.h */
 	err      = nc_inq_dimname( gid, netcdf_dim_id, dim_name );
 	if( err != NC_NOERR ) {
 		fprintf( stderr, "ncview: netcdf_dim_id_to_name: error on ");
 		fprintf( stderr, "nc_inq_dimname call.  Variable=%s\n", var_name );
 		exit( -1 );
 		}
-	return( dim_name );
+	/*
+	printf( "VVVV %s %d netcdf_dim_id_to_name for netcdf_dim_id=%d here is dim_name:>%s<\n", 
+		__FILE__, __LINE__, 
+		netcdf_dim_id, dim_name );
+	*/
+
+	/* 2024-11-05: return fully qualified dim name, not short version */
+	/* return( dim_name ); */
+
+	if( (groupname == NULL) || (groupname[0] == '\0') ) 
+		strcpy( fq_dim_name, dim_name );
+	else
+		{
+		strcpy( fq_dim_name, groupname );
+		strcat( fq_dim_name, "/" );
+		strcat( fq_dim_name, dim_name );
+		}
+
+	/*
+	printf( "VVVV %s %d netcdf_dim_id_to_name for dim >%s< here is full varname, varname_ng: >%s< >%s< FULLY QUAL DIM NAME: >%s<\n", 
+		__FILE__, __LINE__, 
+		dim_name, var_name, var_name_ng, fq_dim_name );
+	*/
+
+	return( fq_dim_name );
 }
 
 /*******************************************************************************************
@@ -515,7 +550,7 @@ int netcdf_dim_name_to_id( int fileid, char *var_name, char *dim_name )
 			ncview_varname(gid, netcdf_var_id) );
 		}
 
-	varname_no_groups( var_name, var_name_ng );
+	varname_no_groups( var_name, var_name_ng, NULL );
 
 	if( debug == 1 ) printf( "netcdf_dim_name_to_id: group_id=%d var_name_no_groups=%s\n", 
 		gid, var_name_ng );
@@ -549,9 +584,10 @@ int netcdf_dim_name_to_id( int fileid, char *var_name, char *dim_name )
 void netcdf_fi_get_data( int fileid, char *var_name, size_t *start_pos, 
 		size_t *count, float *data, NetCDFOptions *aux_data )
 {
-	int	i, err, varid, gid, debug;
+	int	err, varid, gid, debug, do_scale, do_offset;
 	char	var_name_ng[MAX_NC_NAME];
-	size_t	tot_size, n_dims;
+	size_t	i, tot_size, n_dims;
+	float	missval, eps;
 
 	debug = 0;
 
@@ -565,14 +601,14 @@ void netcdf_fi_get_data( int fileid, char *var_name, size_t *start_pos,
 		exit(-1);
 		}
 
-	varname_no_groups( var_name, var_name_ng );
+	varname_no_groups( var_name, var_name_ng, NULL );
 
 	tot_size = 1L;
 	n_dims = netcdf_fi_n_dims( gid, var_name_ng );
 	if( debug==1 ) printf( "netcdf_fi_get_data: ndims=%ld\n", n_dims );
 	for( i=0; i<n_dims; i++ ) {
 		tot_size *= *(count+i);
-		if( debug==1 ) printf( "start[%d]=%ld count[%d]=%ld\n", i, start_pos[i], i, count[i] );
+		if( debug==1 ) printf( "start[%ld]=%ld count[%ld]=%ld\n", i, start_pos[i], i, count[i] );
 		}
 
 
@@ -581,7 +617,7 @@ void netcdf_fi_get_data( int fileid, char *var_name, size_t *start_pos,
 				var_name );
 		fprintf( stderr, "Index, start, count:\n" );
 		for( i=0; i<netcdf_fi_n_dims(fileid, var_name); i++ )
-			fprintf( stderr, "[%d]: %ld %ld\n", i, *(start_pos+i), *(count+i) );
+			fprintf( stderr, "[%ld]: %ld %ld\n", i, *(start_pos+i), *(count+i) );
 		}
 
 	err = nc_get_vara_float( gid, varid, start_pos, count, data );
@@ -590,7 +626,7 @@ void netcdf_fi_get_data( int fileid, char *var_name, size_t *start_pos,
 		fprintf( stderr, "cdfid=%d   variable=%s\n", fileid, var_name );
 		fprintf( stderr, "start, count:\n" );
 		for( i=0; i<netcdf_fi_n_dims(fileid, var_name); i++ )
-			fprintf( stderr, "[%1d]: %ld  %ld\n", 
+			fprintf( stderr, "[%ld]: %ld  %ld\n", 
 				i, *(start_pos+i), *(count+i) );
 		fprintf( stderr, "%s\n", nc_strerror(err) );
 		exit( -1 );
@@ -649,6 +685,27 @@ void netcdf_fi_get_data( int fileid, char *var_name, size_t *start_pos,
 				*(data+i) = *(data+i) * aux_data->scale_factor;
 		}
 
+	/* Implement the USERS scale and offset, used for changing units of displayed data */
+	/* Note: this is NOT the netcdf file add_offset and scale_factor!!! */
+	do_scale  = ( options.scale  < 0.9e30 );
+	do_offset = ( options.offset < 0.9e30 );
+	if( do_scale || do_offset ) {
+		netcdf_fill_value( fileid, var_name, &missval, aux_data );
+		eps = fabsf( missval ) * 1.e-5;
+		}
+	if( do_scale ) {
+		for( i=0; i<tot_size; i++ ) {
+			if( fabsf( *(data+i) - missval ) > eps )
+				*(data+i) = *(data+i) * options.scale;
+			}
+		}
+	if( do_offset ) {
+		for( i=0; i<tot_size; i++ ) {
+			if( fabsf( *(data+i) - missval ) > eps )
+				*(data+i) = *(data+i) + options.offset;
+			}
+		}
+
 	if( options.debug ) 
 		fprintf( stderr, "returning from netcdf_fi_get_data\n" );
 }
@@ -670,44 +727,27 @@ void netcdf_fi_close( int fileid )
 /****************************************************************************************/
 
 /*******************************************************************************************
- * Given a varname string of format: groupname0/groupname1/groupnameN/varname
- * this returns ONLY the trailing groupname
- */
-void varname_no_groups( char *varname, char *varname_sans_groups )
-{
-	int	i, i0, i1, idx_slash[MAX_NC_NAME], nslash;
-	char	ts[MAX_NC_NAME];
-
-	/* Get indices of the slashes */
-	nslash = 0;
-	for( i=0; i<strlen(varname); i++ ) {
-		if( varname[i] == '/' ) {
-			idx_slash[nslash] = i;
-			nslash++;
-			}
-		}
-
-	if( nslash == 0 ) {
-		strcpy( varname_sans_groups, varname );
-		return;
-		}
-
-	strcpy( varname_sans_groups, varname+idx_slash[nslash-1]+1 );
-}
-
-/*******************************************************************************************
  * A version of 'nc_inq_varid' that has been enhanced to return a groupid/varid pair
  * given a var name of form "groupname/varname" (NOTE: *NO* leading slash!!)
  */
 int nc_inq_varid_grp( int ncid, char *varname, int *varid, int *groupid )
 {
-	int	ns, ig, gid, ierr, group_depth, cur_gid, debug, retval;
+	int	ns, ig, gid, ierr, group_depth, cur_gid, debug, retval, ncid2use;
 	char	groupname[MAX_NC_NAME], varname_sans_groups[MAX_NC_NAME], cur_gid_groupname[MAX_NC_NAME];
 
 	debug = 0;
 
 	if( debug ) printf( "nc_inq_varid_grp: entering with ncid=%d (%s) varname=>%s<\n", 
 		ncid, ncview_groupname(ncid), varname );
+
+	/* Since we are generally called with a fully qualified varname, we need
+	 * to start at the root ID, not the group id, which can be passed in 'ncid'
+	 */
+	/* ncid2use = nc_root_id_from_group_id( ncid ); */
+	ncid2use = ncid;
+
+	if( debug ) printf( "nc_inq_varid_grp: original ncid=%d (%s) ncid2use=%d (%s)\n", 
+		ncid, ncview_groupname(ncid), ncid2use, ncview_groupname(ncid2use) );
 
 	if( varname[0] == '/' ) {
 		fprintf( stderr, "Internal error, called nc_inq_varid_grp with a varname that starts with a slash: >%s<\n",
@@ -719,7 +759,7 @@ int nc_inq_varid_grp( int ncid, char *varname, int *varid, int *groupid )
 	if( debug ) printf( "nc_inq_varid_grp: number of slashes in varname: %d\n", ns );
 
 	if( ns > 0 ) {
-		cur_gid = ncid;
+		cur_gid = ncid2use;
 		group_depth = ns;
 
 		/* Traverse to the LAST group in the chain of groups, that's where
@@ -737,11 +777,22 @@ int nc_inq_varid_grp( int ncid, char *varname, int *varid, int *groupid )
 			if( debug ) printf( "nc_inq_varid_grp: looking for subgroup >%s< in root group >%s<\n",
 				groupname, cur_gid_groupname );
 
+			if( strcmp( groupname, cur_gid_groupname ) == 0 ) {
+				/* It is possible for this routine to be called with a groupname ID
+				 * instead of a root file id. In that case, we might have the case
+				 * that the groupname is ALREADY the current gid groupname, and
+				 * we don't need to proceed further
+				 */
+				break;
+				}
+
 			ierr = nc_inq_ncid( cur_gid, groupname, &gid );
 			if( ierr != NC_NOERR ) {
-				fprintf( stderr, "nc_inq_varid_grp: Error, did not find group named >%s< in base group >%s<\n",
+				fprintf( stderr, "%s %d nc_inq_varid_grp: Error, did not find group named >%s< in base group >%s<\n",
+					__FILE__, __LINE__, 
 					groupname, cur_gid_groupname );
-				fprintf( stderr, "nc_inq_varid_grp was called with id=%d (%s) varname=>%s<\n", ncid, cur_gid_groupname, varname );
+				fprintf( stderr, "nc_inq_varid_grp was called with id=%d (%s) ncid2use=%d varname=>%s<\n", 
+					ncid, cur_gid_groupname, ncid2use, varname );
 				exit(-1);
 				return(-1);
 				}
@@ -754,8 +805,8 @@ int nc_inq_varid_grp( int ncid, char *varname, int *varid, int *groupid )
 		*groupid = cur_gid;
 		if( debug ) printf( "nc_inq_varid_grp: should now be on the LAST group, here is groupname: >%s<\n", ncview_groupname( cur_gid ));
 
-		varname_no_groups( varname, varname_sans_groups );
-		if( debug ) printf( "nc_inq_varid_grp: calling regular nc_inq_varid with group %d (%s) and varname_sans_gruops >%s<\n",
+		varname_no_groups( varname, varname_sans_groups, NULL );
+		if( debug ) printf( "nc_inq_varid_grp: calling regular nc_inq_varid with group %d (%s) and varname_sans_groups >%s<\n",
 			cur_gid, ncview_groupname(cur_gid), varname_sans_groups );
 		retval = nc_inq_varid( cur_gid, varname_sans_groups, varid );
 
@@ -765,8 +816,8 @@ int nc_inq_varid_grp( int ncid, char *varname, int *varid, int *groupid )
 		}
 	else
 		{
-		*groupid = ncid;
-		return( nc_inq_varid( ncid, varname, varid ));
+		*groupid = ncid2use;
+		return( nc_inq_varid( ncid2use, varname, varid ));
 		}
 }
 
@@ -897,7 +948,7 @@ int netcdf_att_id( int fileid, int varid, char *name )
 /*******************************************************************************************/
 char * netcdf_title( int fileid )
 {
-	int	err, attid;
+	int	err, attid, max_title_len;
 	char	*ret_val;
 	nc_type	type;
 	size_t	title_len;
@@ -923,6 +974,22 @@ char * netcdf_title( int fileid )
 
 	if( *(ret_val+title_len-1) != '\0' )
 		*(ret_val + title_len) = '\0';
+
+	/* Get rid of trailing spaces / blanks. This is necessary if
+	 * title is too long, which seems to give X a core dump
+	 */
+	for( int kk=title_len-1; kk>0; kk-- ) {
+		if( ret_val[kk] == ' ' )
+			ret_val[kk] = '\0';
+		else
+			break;
+		}
+
+	/* Protection from X windows crash if title is too long */
+	max_title_len = 100;
+	if( strlen( ret_val ) > max_title_len )
+		ret_val[ max_title_len-1 ] = '\0';
+
 	return( ret_val );
 }
 
@@ -952,7 +1019,7 @@ char *netcdf_get_char_att( int fileid, char *var_name, char *att_name )
 		exit(-1);
 		}
 
-	varname_no_groups( var_name, var_name_ng );
+	varname_no_groups( var_name, var_name_ng, NULL );
 
 	if( netcdf_att_id( gid, varid, att_name ) < 0 )
 		return( NULL );
@@ -993,50 +1060,113 @@ char *netcdf_var_units( int fileid, char *var_name )
 /*******************************************************************************************/
 char *netcdf_dim_calendar( int fileid, char *dim_name )
 {
-	int	dimvar_id;
+	int	dimvar_id, dimvar_gid;
 
-	dimvar_id = netcdf_dimvar_id( fileid, dim_name );
+	dimvar_id = netcdf_dimvar_id( fileid, dim_name, &dimvar_gid );
 
 	if( dimvar_id < 0 )
 		return( NULL );
 
-	return( netcdf_get_char_att( fileid, dim_name, "calendar" ));
+	return( netcdf_get_char_att( dimvar_gid, dim_name, "calendar" ));
 }
 
 /*******************************************************************************************/
 char *netcdf_dim_units( int fileid, char *dim_name )
 {
-	int	dimvar_id;
+	int	dimvar_id, dimvar_gid;
 
-	dimvar_id = netcdf_dimvar_id( fileid, dim_name );
+	dimvar_id = netcdf_dimvar_id( fileid, dim_name, &dimvar_gid );
 
 	if( dimvar_id < 0 )
 		return( NULL );
 
-	return( netcdf_var_units( fileid, dim_name ));
+	return( netcdf_var_units( dimvar_gid, dim_name ));
 }
 
-/*******************************************************************************************/
-int netcdf_dimvar_id( int fileid, char *dim_name )
+/*******************************************************************************************
+ * Given the (fully qualified) name of a dim, such as "group_obs_fine/time", returns
+ * the id of the associated dimvar, or -1 if no associted dimvar is found
+ *
+ * Group update: this tends to be called with the root fileid, but sometimes the
+ * dimvar is in a group (i.e., NOT the root fileid). If returned parameter
+ * dimvar_gid == -1, then this is not an issue and just go ahead and use the
+ * passed fileid. If dimvar_gid is NOT equal to -1, you must access the dimvar
+ * using the returned dimvar_gid, NOT the originally passed fileid!
+ */
+int netcdf_dimvar_id( int fileid, char *dim_name, int *dimvar_gid )
 {
-	int	i, err, n_dims, n_vars, rec_dim;
-	char	var_name[256];
+	int	i, err, n_dims, n_vars, rec_dim, gid, fileid2use;
+	char	var_name[256], dim_name_ng[MAX_NC_NAME], groupname[MAX_NC_NAME], gn_slash[MAX_NC_NAME];
+	char	dim_name_2use[ MAX_NC_NAME ];
 	nc_type	var_type;
 	int	n_atts, dim[MAX_VAR_DIMS];
+int parent_id;
+int id1, id2, id3;
 
-	err = nc_inq( fileid, &n_dims, &n_vars, &n_atts, &rec_dim );
+	*dimvar_gid	= fileid;
+	fileid2use 	= fileid;
+	strcpy( dim_name_2use, dim_name );
+
+	/* If we enter with a fully qualified dim name, such as group_obs_fine/time,
+	 * make sure we proceed with the fileid corresponding to that group. Note that
+	 * the netcdf library preceeds all group names with a slash
+	 */
+	 /* First see if there is a slash in dim_name; if so, it is fully qualified */
+	 if( count_nslashes( dim_name_2use ) > 0 ) {
+
+	 	/* Get group name */
+		varname_no_groups( dim_name_2use, dim_name_ng, groupname );
+
+		/* I have to admit I don't understand the netcdf library
+		 * at this point. Since it returns group names with a 
+		 * leading slash it only makes sense it should accept/require
+		 * group names with a leading slash. Yet it seems to require
+		 * NO leading slashes to find the group!
+		 */
+		/*strcpy( gn_slash, "/" );*/
+		/*strcat( gn_slash, groupname );*/
+		/* err = nc_inq_grp_ncid( fileid, gn_slash, &gid ); */
+
+		err = nc_inq_grp_ncid( fileid, groupname, &gid );
+
+		/* If we were called with a group ID to begin with, try agian
+		 * with the root ID
+		 */
+		if( err = NC_ENOGRP ) 
+			err = nc_inq_grp_ncid( nc_root_id_from_group_id(fileid), groupname, &gid );
+
+		if( err != NC_NOERR ) {
+			fprintf( stderr, "%s line %d : Error: nc_inq_grp_ncid failed in routine netcdf_dimvar_id:\n",
+				__FILE__, __LINE__ );
+			fprintf( stderr, "%s\n", nc_strerror( err ) );
+			exit(-1);
+			}
+
+		/* Found a group ID to use instead of the passed fileid */
+		fileid2use = gid;
+
+		/* For the rest of the code, the dim name to use is the
+		 * UNqualifed dim name
+		 */
+		strcpy( dim_name_2use, dim_name_ng );
+	 	}
+
+	err = nc_inq( fileid2use, &n_dims, &n_vars, &n_atts, &rec_dim );
 	if( err != NC_NOERR )
 		return( -1 );
 
 	for( i=0; i<n_vars; i++ ) {
-		err = nc_inq_var( fileid, i, var_name, &var_type, &n_dims, dim, &n_atts );
+		err = nc_inq_var( fileid2use, i, var_name, &var_type, &n_dims, dim, &n_atts );
 		if( err != NC_NOERR )
 			return( -1 );
-		if( strcmp( dim_name, var_name ) == 0 ) {
+		if( strcmp( dim_name_2use, var_name ) == 0 ) {
 			if( (var_type == NC_CHAR) && (options.no_char_dims) )
 				return( -1 );
 			else
+				{
+				*dimvar_gid = fileid2use;
 				return( i );
+				}
 			}
 		}
 
@@ -1046,24 +1176,24 @@ int netcdf_dimvar_id( int fileid, char *dim_name )
 /*******************************************************************************************/
 char *netcdf_dim_longname( int fileid, char *dim_name )
 {
-	int	dimvar_id, err;
+	int	dimvar_id, err, dimvar_gid;
 	size_t	len;
 	nc_type	att_type;
 	char	*dim_longname;
 
-	dimvar_id = netcdf_dimvar_id( fileid, dim_name );
+	dimvar_id = netcdf_dimvar_id( fileid, dim_name, &dimvar_gid );
 	if( dimvar_id < 0 )
 		return( dim_name );
 
-	if( netcdf_att_id( fileid, dimvar_id, "long_name" ) < 0 )
+	if( netcdf_att_id( dimvar_gid, dimvar_id, "long_name" ) < 0 )
 		return( dim_name );
 
-	err = nc_inq_att( fileid, dimvar_id, "long_name", &att_type, &len );
+	err = nc_inq_att( dimvar_gid, dimvar_id, "long_name", &att_type, &len );
 	if( (err != NC_NOERR) || (att_type != NC_CHAR))
 		return( dim_name );
 
 	dim_longname = (char *)malloc( len+1 );
-	err = nc_get_att_text( fileid, dimvar_id, "long_name", dim_longname );
+	err = nc_get_att_text( dimvar_gid, dimvar_id, "long_name", dim_longname );
 	if( err < 0 )
 		return( dim_name );
 	else	
@@ -1080,9 +1210,10 @@ char *netcdf_dim_longname( int fileid, char *dim_name )
  */
 int netcdf_has_dim_values( int fileid, char *dim_name )
 {
-	int	dimvar_id;
+	int	dimvar_id, dimvar_gid;
 
-	dimvar_id = netcdf_dimvar_id( fileid, dim_name );
+	dimvar_id = netcdf_dimvar_id( fileid, dim_name, &dimvar_gid );
+
 	if( dimvar_id < 0 )
 		return( FALSE );
 	else
@@ -1099,7 +1230,7 @@ nc_type netcdf_dim_value( int fileid, char *dim_name, size_t place,
 		double *ret_val_double, char *ret_val_char, size_t virt_place, 
 		int *return_has_bounds, double *return_bounds_min, double *return_bounds_max )
 {
-	int	err, dimvar_id, nvertices;
+	int	err, dimvar_id, nvertices, dimvar_gid;
 	char	var_name[MAX_NC_NAME];
 	nc_type type, ret_type;
 	size_t	limit;
@@ -1110,7 +1241,7 @@ nc_type netcdf_dim_value( int fileid, char *dim_name, size_t place,
 
 	debug = 0;
 
-	if( debug ) printf( "netcdf_dim_value: entering with dim=%s place=%ld\n", dim_name, place );
+	if( debug ) printf( "netcdf_dim_value: entering with dim_name=>%s< place=%ld\n", dim_name, place );
 
 	if( ! netcdf_has_dim_values( fileid, dim_name ) ) {
 		*ret_val_double = (double)virt_place;
@@ -1118,14 +1249,14 @@ nc_type netcdf_dim_value( int fileid, char *dim_name, size_t place,
 		return( NC_DOUBLE );
 		}
 
-	dimvar_id = netcdf_dimvar_id( fileid, dim_name );
+	dimvar_id = netcdf_dimvar_id( fileid, dim_name, &dimvar_gid );
 	if( dimvar_id < 0 ) {
 		*ret_val_double = (double)virt_place;
 		*return_has_bounds = 0;
 		return( NC_DOUBLE );
 		}
 
-	err = nc_inq_var( fileid, dimvar_id, var_name, &type, &n_dims, dim, &n_atts );
+	err = nc_inq_var( dimvar_gid, dimvar_id, var_name, &type, &n_dims, dim, &n_atts );
 	if( err != NC_NOERR ) {
 		fprintf( stderr, "netcdf_dim_value: failed on nc_inq_var call!\n" );
 		exit(-1);
@@ -1143,14 +1274,14 @@ nc_type netcdf_dim_value( int fileid, char *dim_name, size_t place,
 			warn_about_char_dims();
 			ret_type = NC_CHAR;
 			if( n_dims == 2 ) 
-				limit = netcdf_dim_size( fileid, dim[1] );
+				limit = netcdf_dim_size( dimvar_gid, dim[1] );
 			else
 				limit = 1024;
 			i = 0L;
 			char_place[0] = place;
 			do	{
 				char_place[1] = i;
-				err = nc_get_var1_uchar( fileid, dimvar_id, char_place, (((unsigned char *)(ret_val_char))+i));
+				err = nc_get_var1_uchar( dimvar_gid, dimvar_id, char_place, (((unsigned char *)(ret_val_char))+i));
 				i++;
 				}
 			while
@@ -1165,16 +1296,17 @@ nc_type netcdf_dim_value( int fileid, char *dim_name, size_t place,
 		case NC_LONG:
 		case NC_FLOAT:
 		case NC_DOUBLE:
+		case NC_INT64:
 
 			/* If we have a 'bounds' attribute for the dimvar, returned the value
 			 * centered between the boundaries.  Some files have the dim value NOT
 			 * centered between the boundaries, which isn't so useful.
 			 */
-			dimvar_bounds_id = netcdf_dimvar_bounds_id( fileid, dim_name, &nvertices );
+			dimvar_bounds_id = netcdf_dimvar_bounds_id( dimvar_gid, dim_name, &nvertices );
 			if( dimvar_bounds_id < 0 ) { 
 
 				*return_has_bounds = 0;
-				err = nc_get_var1_double( fileid, dimvar_id, &place, ret_val_double );
+				err = nc_get_var1_double( dimvar_gid, dimvar_id, &place, ret_val_double );
 #ifdef ELIM_DENORMS
 				/* Eliminate denormalized numbers */
 				c = (unsigned char *)ret_val_double;
@@ -1201,7 +1333,7 @@ nc_type netcdf_dim_value( int fileid, char *dim_name, size_t place,
 				bstart[1] = 0L;
 				bcount[0] = 1L;
 				bcount[1] = nvertices;
-				err = nc_get_vara_double( fileid, dimvar_bounds_id, bstart, bcount, boundvals );
+				err = nc_get_vara_double( dimvar_gid, dimvar_bounds_id, bstart, bcount, boundvals );
 				if( err != NC_NOERR ) {	
 					fprintf( stderr, "Error reading boundary dim values from file!\n" );
 					fprintf( stderr, "%s\n", nc_strerror( err ) );
@@ -1262,7 +1394,7 @@ void netcdf_fill_aux_data( int id, char *var_name, FDBlist *fdb )
 		exit(-1);
 		}
 
-	varname_no_groups( var_name, var_name_ng );
+	varname_no_groups( var_name, var_name_ng, NULL );
 
 	/* Record the recdim units in this file
 	 */
@@ -1557,8 +1689,7 @@ void netcdf_fill_value( int file_id, char *var_name, float *v, NetCDFOptions *au
 	nc_type	vartype;
 
 	if( options.debug ) 
-		fprintf( stderr, "Checking %s for a missing value...\n",
-				var_name );
+		printf( "Checking %s for a missing value...\n", var_name );
 
 	foundit = FALSE;
 	err = nc_inq_varid_grp( file_id, var_name, &varid, &gid );
@@ -1568,18 +1699,18 @@ void netcdf_fill_value( int file_id, char *var_name, float *v, NetCDFOptions *au
 		exit(-1);
 		}
 
-	varname_no_groups( var_name, var_name_ng );
+	varname_no_groups( var_name, var_name_ng, NULL );
 
 	if( netcdf_get_att_util( gid, varid, var_name_ng, "missing_value", 1, v ) ) {
 		if( options.debug )
-			fprintf( stderr, "found a \"missing_value\" attribute=%g\n",
+			printf( "found a \"missing_value\" attribute=%g\n",
 				*v );
 		foundit = TRUE;
 		}
 
 	if( netcdf_get_att_util( gid, varid, var_name_ng, "_FillValue", 1, v ) ) {
 		if( options.debug )
-			fprintf( stderr, "found a \"_FillValue\" attribute=%g\n",
+			printf( "found a \"_FillValue\" attribute=%g\n",
 				*v );
 		foundit = TRUE;
 		}
@@ -1587,7 +1718,7 @@ void netcdf_fill_value( int file_id, char *var_name, float *v, NetCDFOptions *au
 	/* Is there a global missing value? */
 	if( netcdf_get_att_util( gid, NC_GLOBAL, var_name_ng, "missing_value", 1, v ) ) {
 		if( options.debug )
-			fprintf( stderr, "found a \"missing_value\" attribute=%g\n",
+			printf( "found a \"missing_value\" attribute=%g\n",
 				*v );
 		foundit = TRUE;
 		}
@@ -1635,8 +1766,7 @@ void netcdf_fill_value( int file_id, char *var_name, float *v, NetCDFOptions *au
 		}
 
 	if( options.debug )
-		fprintf( stderr, "setting fillvalue to default for var type=%g\n",
-			*v );
+		printf( "setting fillvalue to default for var type=%g\n", *v );
 }
 
 /*******************************************************************************************/
@@ -1906,7 +2036,8 @@ void warn_about_char_dims()
  */
 int netcdf_dimvar_bounds_id( int fileid, char *dim_name, int *nvertices )
 {
-	int	reg_dimvar_id, bounds_dimvar_id, dimvar_ndims, err, name_length, debug;
+	int	reg_dimvar_id, bounds_dimvar_id, dimvar_ndims, err, name_length, debug, 
+		dimvar_gid;
 	char	*attname = "bounds";
 	char 	*bounds_dimvarname;
 	nc_type	type;
@@ -1920,21 +2051,21 @@ int netcdf_dimvar_bounds_id( int fileid, char *dim_name, int *nvertices )
 	/* First get the regular dimvar for this dim, then see if that dimvar
 	 * has an attribute named "bounds".
 	 */
-	reg_dimvar_id = netcdf_dimvar_id( fileid, dim_name );
+	reg_dimvar_id = netcdf_dimvar_id( fileid, dim_name, &dimvar_gid );
 	if( reg_dimvar_id < 0 ) {
 		if( debug ) printf( "netcdf_dimvar_bounds_id: dim %s does NOT have a regular dimvar, returning -1\n", dim_name );
 		return( -1 );
 		}
 
-	if( netcdf_att_id( fileid, reg_dimvar_id, attname ) < 0 )
+	if( netcdf_att_id( dimvar_gid, reg_dimvar_id, attname ) < 0 )
 		return( -1 );
 
-	err = ncattinq( fileid, reg_dimvar_id, attname, &type, &name_length );
+	err = ncattinq( dimvar_gid, reg_dimvar_id, attname, &type, &name_length );
 	if( (err < 0) || (type != NC_CHAR))
 		return( -1 );
 
 	bounds_dimvarname = (char *)malloc( name_length+1 );
-	err = ncattget( fileid, reg_dimvar_id, attname, bounds_dimvarname );
+	err = ncattget( dimvar_gid, reg_dimvar_id, attname, bounds_dimvarname );
 	if( err < 0 ) {
 		free( bounds_dimvarname );
 		return( -1 );
@@ -1943,14 +2074,14 @@ int netcdf_dimvar_bounds_id( int fileid, char *dim_name, int *nvertices )
 	if( *(bounds_dimvarname+name_length-1) != '\0' )
 		*(bounds_dimvarname + name_length) = '\0';
 
-	err = nc_inq_varid( fileid, bounds_dimvarname, &bounds_dimvar_id );
+	err = nc_inq_varid( dimvar_gid, bounds_dimvarname, &bounds_dimvar_id );
 	if( err != 0 ) {
 		free( bounds_dimvarname );
 		return( -1 );
 		}
 
 	/* Currently only know how to handle 2-d bounds variables */
-	err = nc_inq_varndims( fileid, bounds_dimvar_id, &dimvar_ndims );
+	err = nc_inq_varndims( dimvar_gid, bounds_dimvar_id, &dimvar_ndims );
 	if( (err != NC_NOERR) || (dimvar_ndims != 2)) {
 		fprintf( stderr, "Currently can only handle bounds dims with ndims=2; bounds var %s has ndims=%d.  Ignoring!\n", 
 				bounds_dimvarname, dimvar_ndims );
@@ -1961,13 +2092,13 @@ int netcdf_dimvar_bounds_id( int fileid, char *dim_name, int *nvertices )
 	/* Get the dim ids of the bounds var so we can get the length of the trailing
 	 * one, which is the number of vertices 
 	 */
-	err = nc_inq_vardimid( fileid, bounds_dimvar_id, dimids );
+	err = nc_inq_vardimid( dimvar_gid, bounds_dimvar_id, dimids );
 	if( err != NC_NOERR ) {
 		fprintf( stderr, "Error reading bounds info for boundary variable %s.  Ignoring!\n", bounds_dimvarname );
 		free( bounds_dimvarname );
 		return( -1 );
 		}
-	err = nc_inq_dimlen( fileid, dimids[1], &st_nvertices );
+	err = nc_inq_dimlen( dimvar_gid, dimids[1], &st_nvertices );
 	if( err != NC_NOERR ) {
 		fprintf( stderr, "Error reading nvertices info for boundary variable %s.  Ignoring!\n", bounds_dimvarname );
 		free( bounds_dimvarname );
@@ -2004,5 +2135,83 @@ char *ncview_varname( int gid, int varid )
 
 	ierr = nc_inq_varname( gid, varid, buffer );
 	return( &(buffer[0]) );
+}
+
+/*****************************************************************************************************
+ * Given a ncid (file id) which may or may not be the root id, prints the entire group structure
+ * of the file. Useful for debugging
+ */
+void nc_print_group_structure( int fileid )
+{
+	int 	rootid, cursor, parent;
+	int	*gid, ig, ndims, nvars, natts, unlimdimid;
+	int	ierr, ng;
+	size_t	gnl;
+	char	*group_name;
+
+	/* Get root */
+	cursor = fileid;
+	while( nc_inq_grp_parent( cursor, &parent ) == 0 ) {
+		cursor = parent;
+		}
+	rootid = cursor;
+
+	printf( "nc_print_group_structure: fileid=%d rootid=%d\n", fileid, rootid );
+	ierr = nc_inq_grps( rootid, &ng, NULL );	/* first call to get num groups */
+
+	if( ng == 0 ) {
+		printf("nc_print_group_structure: no groups in this file\n" );
+		return;
+		}
+
+	gid = (int *)malloc( sizeof(int) * ng );     
+	ierr = nc_inq_grps( rootid, &ng, gid );	
+	printf( "nc_print_group_structure: fileid=%d rootid=%d has %d groups:\n", fileid, rootid, ng );
+
+	for( ig=0; ig<ng; ig++ ) {
+
+		/* Get group name */
+		ierr = nc_inq_grpname_len( gid[ig], &gnl );
+		group_name = malloc( sizeof(char) * (gnl+2) );
+		ierr = nc_inq_grpname_full( gid[ig], &gnl, group_name );
+
+		/* find info about this group: number of dims, vars, atts */
+		ierr = nc_inq( gid[ig], &ndims, &nvars, &natts, &unlimdimid );
+
+		printf( "   group %d: id=%d >%s<\n", 
+			ig, gid[ig], group_name );
+
+		printf( "       ndims:%d nvars:%d natts:%d unlimdimid:%d\n", 
+			ndims, nvars, natts, unlimdimid );
+
+		free( group_name );
+		}
+}
+
+/*****************************************************************************************************
+ * Given a fileid, which may be a root ID or a group ID, returns the root group ID
+ */
+int nc_root_id_from_group_id( int gid ) 
+{
+	int	err, cursor, parentid;
+
+	cursor = gid;
+
+	/* It is usually the case that the passed gid is the root id, so short circuit */
+	if( nc_inq_grp_parent( gid, &parentid ) == NC_ENOGRP )
+		return( gid );
+
+	cursor = gid;
+	while( (err = nc_inq_grp_parent( cursor, &parentid )) == 0 ) 
+		cursor = parentid;
+		
+
+	if( err == NC_ENOGRP ) 
+		return( cursor );	/* at the root of the chain */
+
+	fprintf( stderr, "%s line %d : nc_root_id_from_group_id failed with error %d : %s\n",
+		__FILE__, __LINE__, 
+		err, nc_strerror(err) );
+	exit(0);
 }
 

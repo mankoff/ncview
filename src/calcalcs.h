@@ -4,7 +4,7 @@
 
     Version 1.2, released 16 June 2014
 
-    Copyright (C) 2010-2014 David W. Pierce, dpierce@ucsd.edu
+    Copyright (C) 2010-2024 David W. Pierce, davidwilliampierce@gmail.com
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

@@ -25,7 +25,7 @@ out a Stringlist to a file and read one in from a file, so I coerce
 the state into a Stringlist and then use that functionalilty.
 
 David W Pierce
-Scripps Insititution of Oceanography
+davidwilliampierce@gmail.com
 15 July 2011
 */
 

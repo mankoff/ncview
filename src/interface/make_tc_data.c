@@ -2,7 +2,7 @@
  * colormap and the information about the server's byte depth, byte ordering, etc.
  *
  * Part of Ncview by David W. Pierce
- * Copyright (C) 1993 through 2011 David W. Pierce
+ * Copyright (C) 1993 through 2024 David W. Pierce
  * 
  * This program  is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, Version 3, as
@@ -18,8 +18,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * David W. Pierce
- * 6259 Caminito Carrena
- * San Diego, CA  92122
+ * davidwilliampierce@gmail.com
  */
 
 #include "../ncview.includes.h"

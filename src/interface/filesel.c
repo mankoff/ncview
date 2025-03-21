@@ -1,6 +1,6 @@
 /*
  * Ncview by David W. Pierce.  A visual netCDF file viewer.
- * Copyright (C) 1993 through 2010 David W. Pierce
+ * Copyright (C) 1993 through 2024 David W. Pierce
  *
  * This program  is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, Version 3, as 
@@ -16,9 +16,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * David W. Pierce
- * 6259 Caminito Carrena
- * San Diego, CA  92122
- * pierce@cirrus.ucsd.edu
+ * davidwilliampierce@gmail.com
  */
 
 /*
@@ -239,9 +237,11 @@ fs_double_click(Widget w, XButtonEvent *e, String *p, Cardinal *n )
 	 */
 	if( fs_is_a_directory( highlited_entry->string )) {
 		ierr = chdir( highlited_entry->string );
+		if( ierr != 0 ) 
+			fprintf( stderr, "Error when trying to chdir to %s\n", highlited_entry->string );
 		fs_get_file_dir_list( &files_and_dirs );
 		XawListChange( fs_list_widget, 
-			stringlist_to_Xawlist( files_and_dirs ),
+			(_Xconst char **)stringlist_to_Xawlist( files_and_dirs ),
 			0, 0, False );
 		XtVaSetValues( fs_pathname_text_widget, 
 			XtNstring, fs_cwd(), NULL );
@@ -286,11 +286,15 @@ file_select( char **filename, char *init_dir )
 		}
 
 	ierr = chdir( init_dir );
+	if( ierr != 0 ) 
+		fprintf( stderr, "file_select: error when trying to chdir to init_dir %s\n", init_dir );
 
 	fs_get_file_dir_list( &files_and_dirs );
 	retval = fs_popup( files_and_dirs );
 
 	ierr = chdir( orig_dir );
+	if( ierr != 0 ) 
+		fprintf( stderr, "file_select: error when trying to chdir to orig_dir %s\n", orig_dir );
 
 	/* Get the final selected filename if not MESSAGE_CANCEL */
 	if( retval != MESSAGE_CANCEL ) {
@@ -384,6 +388,8 @@ fs_cwd()
 	static char buf[2048];
 
 	s = getcwd( buf, 2048 );
+	if( s == NULL )
+		;
 	return( buf );
 }
 

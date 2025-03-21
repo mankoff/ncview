@@ -1,6 +1,6 @@
 /*
  * Ncview by David W. Pierce.  A visual netCDF file viewer.
- * Copyright (C) 1993 through 2010 David W. Pierce
+ * Copyright (C) 1993 through 2024 David W. Pierce
  *
  * This program  is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as 
@@ -16,9 +16,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * David W. Pierce
- * 6259 Caminito Carrean
- * San Diego, CA   92122
- * pierce@cirrus.ucsd.edu
+ * davidwilliampierce@gmail.com
  */
 
 /*     define DEBUG */
@@ -205,7 +203,7 @@ print_other_info( FILE *outf, float output_scale, size_t x_size, size_t y_size,
 		*dim_name, *dim_longname;
 	FDBlist	*fdb;
 	NCDim	*d;
-	int	i, type, has_bounds;
+	int	i, type, has_bounds, istat;
 	size_t	*actual_place;
 	time_t	sec_since_1970;
 	double	temp_double, bound_min, bound_max;
@@ -387,7 +385,7 @@ print_other_info( FILE *outf, float output_scale, size_t x_size, size_t y_size,
 			}
 		fclose( f_dummy );
 		snprintf( tstr, 1499, "lpr \"%s\"\n", printopts.out_file_name );
-		system( tstr );
+		istat = system( tstr );
 		unlink( printopts.out_file_name );
 		}
 

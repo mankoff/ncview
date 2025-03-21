@@ -1,6 +1,6 @@
 /*
  * Ncview by David W. Pierce.  A visual netCDF file viewer.
- * Copyright (C) 1993 through 2013 by David W. Pierce
+ * Copyright (C) 1993 through 2024 by David W. Pierce
  *
  * This program  is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as 
@@ -16,9 +16,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * David W. Pierce
- * 6259 Caminito Carrena 
- * San Diego, CA   92122
- * pierce@cirrus.ucsd.edu
+ * davidwilliampierce@gmail.com
  */
 
 /*
@@ -31,8 +29,8 @@
 #include <udunits2.h>
 #endif
 
-#define PROGRAM_ID		"Ncview 2.1.7 David W. Pierce  29 March 2016"
-#define PROGRAM_VERSION_STRING	"2.1.7"
+#define PROGRAM_ID		"Ncview 2.1.11 David W. Pierce 7 November 2024"
+#define PROGRAM_VERSION_STRING	"2.1.11"
 #define APP_RES_VERSION 	1.93
 
 #ifndef TRUE
@@ -107,10 +105,11 @@
 
 /*****************************************************************************/
 /* Transforming the data before turning it into pixels is supported */
-#define N_TRANSFORMS		3
+#define N_TRANSFORMS		4
 #define TRANSFORM_NONE		1
 #define TRANSFORM_LOW		2
 #define TRANSFORM_HI		3
+#define TRANSFORM_CENTER	4
 
 /*****************************************************************************
  * Maximum number of X-Y plot windows which can pop up, and the max
@@ -130,15 +129,15 @@
 
 /*****************************************************************************/
 /* Maximum name length of a variable */
-#define MAX_VAR_NAME_LEN	132
+#define MAX_VAR_NAME_LEN	4095
 
 /*****************************************************************************/
 /* Maximum name length of a file */
-#define MAX_FILE_NAME_LEN	1024
+#define MAX_FILE_NAME_LEN	4095
 
 /*****************************************************************************/
 /* Maximum name length of a recdim units */
-#define MAX_RECDIM_UNITS_LEN	1024
+#define MAX_RECDIM_UNITS_LEN	4095
 
 /*****************************************************************************/
 /* Possible interpretations for the change_view routine; either change
@@ -540,6 +539,9 @@ typedef struct {
 	int	enable_group_sel;	/* TRUE if we have some vars in groups, so interface must incl. grp selection */
 
 	int	missval_r, missval_g, missval_b;	/* 0-255 values of R, G, B for missing data */
+
+	float	scale, offset;	/* These do NOT refer to the scale & offset in the netcdf file. They are for changing units of data */
+				/* SCALE IS APPLIED FIRST. So to conv C to F, use -scale 1.8 -offset 32 */
 
 	OverlayOptions *overlay;
 } Options;

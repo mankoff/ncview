@@ -39,7 +39,7 @@ typedef struct {
 	char	*string;
 	void	*next, *prev;
 	int	index;		/* initialized to position in list */
-	void	*aux;		/* auxilliary data */
+	void	*aux;		/* auxiliary data */
 	int	sltype;		/* one of the defined SLTYPEs, indicating type of aux */
 } Stringlist;
 

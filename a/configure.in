@@ -36,7 +36,7 @@ AC_HEADER_STDC
 
 
 AC_CONFIG_HEADER(config.h)
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([ncview],[ncview_version])
 
 AC_PATH_X
 if test "x$no_x" == "xyes"; then

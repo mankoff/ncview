@@ -44,7 +44,7 @@ stringlist_match_string_exact( Stringlist *list, char *str )
 }
 
 /**************************************************************************************
- * Adds the given string and auxilliary data to the list.
+ * Adds the given string and auxiliary data to the list.
  * The first time this is called, assuming you want to make a new stringlist, pass
  * with *list == NULL. This will make a new stringlist with the passed string (and 
  * aux info) as the first element of the new string.
@@ -163,7 +163,7 @@ stringlist_add_string_ordered( Stringlist **list, char *new_string, void *aux, i
 }
 		
 /**************************************************************************************
- * Allocates space in the stringlist element for the auxilliary data, and copies it over
+ * Allocates space in the stringlist element for the auxiliary data, and copies it over
  * Returns 0 on success, -1 on error (usually inability to allocate memory)
  */
 	static int
@@ -493,7 +493,7 @@ stringlist_check_args( Stringlist **list, char *new_string, void *aux, int sltyp
 		}
 
 	if( (sltype == SLTYPE_STRING) && (strlen( (char *)aux ) > STRINGLIST_MAX_LEN) ) {
-		fprintf( stderr, "stringlist_check_args: error, trying to add auxilliary string data to a stringlist element and that string is longer than allowed max of %d\n",
+		fprintf( stderr, "stringlist_check_args: error, trying to add auxiliary string data to a stringlist element and that string is longer than allowed max of %d\n",
 			STRINGLIST_MAX_LEN );
 		return( -68 );
 		}

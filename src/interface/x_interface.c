@@ -1,6 +1,6 @@
 /*
  * Ncview by David W. Pierce.  A visual netCDF file viewer.
- * Copyright (C) 1993-2010 David W. Pierce
+ * Copyright (C) 1993-2024 David W. Pierce
  *
  * This program  is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as 
@@ -16,9 +16,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * David W. Pierce
- * 6259 Caminito Carrena
- * San Diego, CA  92122
- * pierce@cirrus.ucsd.edu
+ * davidwilliampierce@gmail.com
  */
 
 /*****************************************************************************
@@ -1334,16 +1332,16 @@ void x_init_widgets_varsel_menu_grp( Widget menu_box, Widget *varsel_menu_widget
 			 * the group named "/"
 			 */
 			if( (count_nslashes( var_cursor->name )==0) && (strncmp( "/", group_cursor->string, 1)==0)) {
-printf( "root check: putting var %s in gruop %s\n", var_cursor->name, group_cursor->string );
+printf( "root check: putting var %s in group %s\n", var_cursor->name, group_cursor->string );
 				my_grp_num[i] = igrp;
 				break;
 				}
 			/* Var has at least one slash in its name */
 			else if( strncmp( var_cursor->name, group_cursor->string, strlen(group_cursor->string) ) == 0 ) {
-printf( "non root check: putting var %s in gruop %s\n", var_cursor->name, group_cursor->string );
-				/* At this point a var with a group name that STARTS with another gruop name,
+/* printf( "non root check: putting var %s in group %s\n", var_cursor->name, group_cursor->string ); */
+				/* At this point a var with a group name that STARTS with another group name,
 				 * but is longer, will match. So we check to see if the var's name actually
-				 * ends with a slash where it should, if this is the right gruop. If it does
+				 * ends with a slash where it should, if this is the right group. If it does
 				 * end with a slash, then it's the right group name
 				 */
 				if( var_cursor->name[ strlen(group_cursor->string) ] == '/' ) {
@@ -1502,7 +1500,7 @@ void x_init_widgets_varsel_list( Widget parent )
 		if( var == NULL ) 
 			{
 			fprintf( stderr, "ncview: x_init_widgets: internal ");
-			fprintf( stderr, "inconsistancy -- empty variable list\n" );
+			fprintf( stderr, "inconsistency -- empty variable list\n" );
 			exit( -1 );
 			}
 		if( i == 0 ) {
@@ -2560,6 +2558,9 @@ void x_indicate_active_dim( int dimension, char *dim_name )
 	String	label;
 	int	i = 0;
 	char	new_label[ 132 ];
+	char	dim_name_ng[ MAX_NC_NAME ];
+
+	varname_no_groups( dim_name, dim_name_ng, NULL );
 
 	if( dimension == DIMENSION_X )
 		snprintf( new_label, 130, "X:" );
@@ -2580,7 +2581,7 @@ void x_indicate_active_dim( int dimension, char *dim_name )
 	w = diminfo_name_widget;
 	while( *w != NULL ) {
 		XtVaGetValues( *w, XtNlabel, &label, NULL );
-		if( strcmp( label, dim_name ) == 0 ) {
+		if( strcmp( label, dim_name_ng ) == 0 ) {
 			XtVaSetValues( *(diminfo_dim_widget+i), 
 					XtNlabel, new_label,
 					XtNwidth, app_data.dimlabel_width, NULL);
@@ -2591,7 +2592,7 @@ void x_indicate_active_dim( int dimension, char *dim_name )
 
 	fprintf( stderr, "ncview: x_indicate_active_dim: cannot find " );
 	fprintf( stderr, "widget for dimension %d, named %s\n", 
-							dimension, dim_name );
+							dimension, dim_name_ng );
 	exit( -1 );
 }
 
@@ -3094,12 +3095,16 @@ void x_fill_dim_info( NCDim *d, int please_flip )
 	String	widget_name;
 	int	i;
 	char	temp_label[132];
+	char 	dimname_ng[ MAX_NC_NAME ];
+
+	/* Get the dimname sans group */
+	varname_no_groups( d->name, dimname_ng, NULL );
 
 	/* first, find the row we want */
 	i = 0;
 	while( (w = diminfo_name_widget + i) != NULL ) {
 		XtVaGetValues( *w, XtNlabel, &widget_name, NULL );
-		if( strcmp( widget_name, d->name ) == 0 ) {
+		if( strcmp( widget_name, dimname_ng ) == 0 ) {
 
 			if( please_flip )
 				snprintf( temp_label, 130, "%g", d->max );
@@ -3136,7 +3141,7 @@ void x_fill_dim_info( NCDim *d, int please_flip )
 		}
 
 	fprintf( stderr, "ncview: x_fill_dim_info: error, can't find " );
-	fprintf( stderr, "dim info widget named \"%s\"\n", d->name );
+	fprintf( stderr, "dim info widget named \"%s\"\n", dimname_ng );
 	exit( -1 );
 }
 
@@ -3146,11 +3151,14 @@ void x_set_cur_dim_value( char *dim_name, char *string )
 	int	i;
 	Widget	*w;
 	String	label;
+	char	dim_name_ng[ MAX_NC_NAME ];
+
+	varname_no_groups( dim_name, dim_name_ng, NULL );
 
 	i = 0;
 	while( (w = diminfo_name_widget+i) != NULL ) {
 		XtVaGetValues( *w, XtNlabel, &label, NULL );
-		if( strcmp( label, dim_name ) == 0 ) {
+		if( strcmp( label, dim_name_ng ) == 0 ) {
 			XtVaSetValues( *(diminfo_cur_widget+i), 
 				XtNlabel, string, NULL );
 			return;
@@ -3158,7 +3166,7 @@ void x_set_cur_dim_value( char *dim_name, char *string )
 		i++;
 		}
 	fprintf( stderr, "ncview: x_set_cur_dim: error; widget for dimension ");
-	fprintf( stderr, "named \"%s\" not found.\n", dim_name );
+	fprintf( stderr, "named \"%s\" not found.\n", dim_name_ng );
 	exit( -1 );
 }
 

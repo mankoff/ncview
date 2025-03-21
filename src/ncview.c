@@ -1,6 +1,6 @@
 /*
  * Ncview by David W. Pierce.  A visual netCDF file viewer.
- * Copyright (C) 1993 through 2015 David W. Pierce
+ * Copyright (C) 1993 through 2024 David W. Pierce
  *
  * This program  is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, Version 3, as 
@@ -16,9 +16,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * David W. Pierce
- * 6259 Caminito Carrena
- * San Diego, CA  92122
- * pierce@cirrus.ucsd.edu
+ * davidwilliampierce@gmail.com
  */
 
 #include "ncview.includes.h"
@@ -76,6 +74,7 @@ static void init_cmaps_from_data();
 static void init_cmap_from_data( char *colormap_name, int *data );
 static int get_cmaps_from_dir( char *dir_name );
 static int ncview_cmap_suffix( char *s, int *n_suffix );
+static int any_var_in_group( NCVar *var );
 
 /***********************************************************************************************/
 	int
@@ -273,6 +272,16 @@ parse_options( int argc, char *argv[] )
 				options.autoscale = TRUE;
 				}
 
+			else if( strncmp( argv[i], "-scale", 6 ) == 0 ) {
+				sscanf( argv[i+1], "%f", &(options.scale) );
+				i++;
+				}
+
+			else if( strncmp( argv[i], "-offset", 7 ) == 0 ) {
+				sscanf( argv[i+1], "%f", &(options.offset) );
+				i++;
+				}
+
 			else if( strncmp( argv[i], "-listsel_max", 7 ) == 0 ) {
 				sscanf( argv[i+1], "%d", &(options.listsel_max) );
 				i++;
@@ -386,6 +395,8 @@ initialize_misc()
 	options.auto_overlay	 = DEFAULT_AUTO_OVERLAY;
 	options.autoscale	 = FALSE;
 	options.calendar	 = NULL;
+	options.scale		 = 1.e30;	/* This val means do NOT do any user scaling of data */
+	options.offset		 = 1.e30;	/* This val means do NOT do any user offset of data */
 
 	options.overlay          = (OverlayOptions *)malloc( sizeof( OverlayOptions ));
 	options.overlay->doit    = FALSE;
@@ -484,7 +495,7 @@ get_cmaps_from_dir( char *dir_name )
 	int		n_colormaps = 0, n_suffix;
 
 	if( options.debug ) 
-		fprintf( stderr, "Getting colormaps from dir >%s<\n", dir_name );
+		printf( "Getting colormaps from dir >%s<\n", dir_name );
 
 	ncdir     = opendir( dir_name );
 	if( ncdir == NULL ) 
@@ -547,7 +558,7 @@ init_cmap_from_data( char *colormap_name, int *data )
 	unsigned char r[256], g[256], b[256];
 
 	if( options.debug ) 
-		fprintf( stderr, "    ... initting cmap >%s< from supplied data\n", colormap_name );
+		printf( "    ... initting cmap >%s< from supplied data\n", colormap_name );
 
 	for( i=0; i<256; i++ ) {
 		r[i] = (unsigned char)data[i*3+0];
@@ -570,7 +581,7 @@ init_cmap_from_file( char *dir_name, char *file_name, int n_suffix )
 	size_t	slen;
 
 	if( options.debug ) 
-		fprintf( stderr, "    ... initting cmap >%s<\n", file_name );
+		printf( "    ... initting cmap >%s<\n", file_name );
 
 	/* Colormap name is the file name without the '.ncmap' or '.ncm' extension */
 	colormap_name = (char *)malloc( strlen(file_name)-(n_suffix-1) );
@@ -649,7 +660,7 @@ initialize_file_interface( Stringlist *input_files )
 	NCVar	*var;
 
 	if( options.debug ) 
-		fprintf( stderr, "Initializing file interface...\n" );
+		printf( "Initializing file interface...\n" );
 
 	nfiles = stringlist_len( input_files );
 
@@ -658,7 +669,7 @@ initialize_file_interface( Stringlist *input_files )
 		input_files = input_files->next;
 		}
 	if( options.debug ) 
-		fprintf( stderr, "...calculating dim min & maxes...\n" );
+		printf( "...calculating dim min & maxes...\n" );
 	calc_dim_minmaxes();
 
 	/* Get the effective dimensionality of all the vars.
@@ -674,12 +685,12 @@ initialize_file_interface( Stringlist *input_files )
 			if( *(var->size + idim) > 1 )
 				var->effective_dimensionality++;
 			if( options.debug ) 
-				fprintf( stderr, "var %s has %d dims, dim %d: >%s< len %ld\n",
+				printf( "var %s has %d dims, dim %d: >%s< len %ld\n",
 					var->name, var->n_dims, idim, 
 					var->dim[idim]->name, var->dim[idim]->size );
 			}
 		if( options.debug ) {
-			fprintf( stderr, "variable %s had effective_dimensionality of %d\n",
+			printf( "variable %s had effective_dimensionality of %d\n",
 				var->name, var->effective_dimensionality );
 			}
 		var = var->next;
@@ -695,7 +706,7 @@ initialize_file_interface( Stringlist *input_files )
 		options.varsel_style = VARSEL_MENU;
 
 	if( options.debug ) 
-		fprintf( stderr, "Done initializing file interface...\n" );
+		printf( "Done initializing file interface...\n" );
 }
 
 /***********************************************************************************************/
@@ -788,7 +799,7 @@ fprintf( stderr, "		(\"-minmax slow\"), or all entries (\"-minmax all\").\n" );
 fprintf( stderr, "	-frames: Dump out PNG images (to make a movie, for instance)\n" );
 fprintf( stderr, "	-nc: 	Specify number of colors to use.\n" );
 fprintf( stderr, "	-no1d: 	Do NOT allow 1-D variables to be displayed.\n" );
-fprintf( stderr, "	-repl: 	Set default blowup type to replicate rathern than bilinear.\n" );
+fprintf( stderr, "	-repl: 	Set default blowup type to replicate rather than bilinear.\n" );
 fprintf( stderr, "	-calendar: Specify time calendar to use, overriding value in file. Known: noleap standard gregorian 365_day 360_day.\n" );
 fprintf( stderr, "	-private: Use a private colormap.\n" );
 fprintf( stderr, "	-debug: Print lots of debugging info.\n" );
@@ -811,6 +822,8 @@ fprintf( stderr, "	-maxsize: specifies max size of window before scrollbars are 
 fprintf( stderr, "              integer between 30 and 100 giving percentage, or two integers separated by a\n" );
 fprintf( stderr, "              comma giving width and height. Ex: -maxsize 75  or -maxsize 800,600\n" );
 fprintf( stderr, "	-c: 	print the copying policy.\n" );
+fprintf( stderr, "	-scale: Useful for changing units; scale data by this factor\n" );
+fprintf( stderr, "	-offset: Useful for changing units; offset data by this factor (Ex: -scale 1.8 -offset 32 converts C to F)\n" );
 fprintf( stderr, "datafiles:\n" );
 fprintf( stderr, "	You can have up to 32 of these.  They must all be in\n" );
 fprintf( stderr, "	the same general format, or have different variables in\n" );
@@ -824,8 +837,8 @@ exit( -1 );
 print_disclaimer()
 {
 fprintf( stderr, "%s\n", PROGRAM_ID );
-fprintf( stderr, "http://meteora.ucsd.edu:80/~pierce/ncview_home_page.html\n" );
-fprintf( stderr, "Copyright (C) 1993 through 2015, David W. Pierce\n" );
+fprintf( stderr, "https://cirrus.ucsd.edu/ncview/\n" );
+fprintf( stderr, "Copyright (C) 1993 through 2024, David W. Pierce\n" );
 fprintf( stderr, "Ncview comes with ABSOLUTELY NO WARRANTY; for details type `ncview -w'.\n" );
 fprintf( stderr, "This is free software licensed under the Gnu General Public License version 3; type `ncview -c' for redistribution details.\n\n" );
 }
@@ -834,7 +847,7 @@ fprintf( stderr, "This is free software licensed under the Gnu General Public Li
 	void
 print_no_warranty()
 {
-printf( "\n The program `ncview' is Copyright (C) 1993 through 2015 David W. Pierce, and\n" );
+printf( "\n The program `ncview' is Copyright (C) 1993 through 2024 David W. Pierce, and\n" );
 printf( "is subject to the terms and conditions of the Gnu General Public License,\n" );
 printf( "Version 3. For information on copying, modifying, or distributing `ncview',\n" );
 printf( "type `ncview -c'.\n" );
@@ -874,7 +887,7 @@ printf( "POSSIBILITY OF SUCH DAMAGES.\n" );
 	void 
 print_copying()
 {
-printf( "  The program `ncview' is Copyright (C) 1993 through 2015, David W. Pierce, and \n" );
+printf( "  The program `ncview' is Copyright (C) 1993 through 2024, David W. Pierce, and \n" );
 printf( "is subject to the terms and conditions of the Gnu General Public License,\n" );
 printf( "Version 3.  Ncview comes with NO WARRANTY; for further information, type\n" );
 printf( "`ncview -w'.\n" );

@@ -5,7 +5,7 @@
 
     Version 1.2, released 8 June 2014
 
-    Copyright (C) 2010-2014 David W. Pierce, dpierce@ucsd.edu
+    Copyright (C) 2010-2024 David W. Pierce, davidwilliampierce@gmail.com
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-/* #define DEBUG  */
+/* define DEBUG   */
 
 #include <stdio.h>
 #include <unistd.h>
@@ -54,10 +54,11 @@ static double sec_rounding_value = 1.e-6;
 
 /* Internal to this file only */
 static void 	initialize( const char *ut_read_xml_arg );
-static void 	get_origin( const char *dataunits_str, ut_unit *dataunits, int *y0, int *mon0, int *d0, int *h0, int *min0, double *s0 );
+static void 	get_origin( const char *dataunits_str, int *y0, int *mon0, int *d0, int *h0, int *min0, double *s0 );
 static cv_converter *get_day_to_user_converter( ut_unit *uu, int y0, int mon0, int d0, int h0, int min0, double s0 );
 static cv_converter *get_user_to_day_converter( ut_unit *uu, int y0, int mon0, int d0, int h0, int min0, double s0 );
 static calcalcs_cal *getcal( const char *name );
+static void strip_timezone_info( const char *units_orig, char *out );
 static void unknown_cal_emit_warning( const char *calendar_name );
 static int inferred_origin_year( const char *s );
 
@@ -86,7 +87,7 @@ static int n_unkcal=0;
 /*========================================================================================
  * Turns the passed value into a Y/M/D date 
  */
-int utCalendar2_cal( double val, const char *dataunits_str, int *year, int *month, int *day, int *hour,
+int utCalendar2_cal( double val, const char *dataunits_str_orig, int *year, int *month, int *day, int *hour,
                                 int *minute, double *second, const char *calendar_name )
 {
 
@@ -111,10 +112,40 @@ char *fuckyou;
 	fprintf( stderr, "utCalendar2_cal: entering with val=%lf calendar_name=%s\n", val, calendar_name );
 #endif
 
-	if( (dataunits_str == NULL) || (strlen(dataunits_str) == 0)) {
+	if( (dataunits_str_orig == NULL) || (strlen(dataunits_str_orig) == 0)) {
 		fprintf( stderr, "Error, utCalendar2 passed a NULL units string\n" );
 		return( UT_ENOINIT );
 		}
+
+	/* I know it seems odd at first glance, but we must strip the time zone info from the
+	 * string to make this work correctly. The reason is that the udunits time converter
+	 * call seems to reference everything to GMT. So if we did NOT strip the time zone from
+	 * the units string, then the returned day would be the GMT date, not the date in 
+	 * the time zone specified in the units string. That seems wrong to me. So the correct
+	 * interpretation of the time zone string is more informational, i.e., the times are
+	 * declared to be correct in the time zone specified in the time zone string (if any).
+	 * For example, "20 hours since 2001-01-01 00:00 -8" is interpreted to be 8 PM on
+	 * Jan 1st 2001 in the Pacific time zone, so the date returned is 2001/01/01. If we 
+	 * did NOT strip the time zone string, then the udunits time functions would reference 
+	 * this date/time to GMT, which is date/time 2001-01-02 04:00, and therefore return 
+	 * date 2001/01/02. 
+	 */
+
+	/* Strip time zone info from the date string */
+	char dataunits_str[ 1010 ];
+	if( strlen( dataunits_str_orig ) > 1000 ) { 
+		fprintf( stderr, "utCalendar2_cal.c: get_origin: error, dataunits_str is too long, must be < 1000 but is %ld\nHere is units string: %s\n",
+			strlen( dataunits_str_orig ),
+		     	dataunits_str_orig );
+		exit( -1 );
+		}
+#ifdef DEBUG
+	printf( "orig units string before stripping time zone: >%s<\n", dataunits_str_orig );
+#endif
+	strip_timezone_info( dataunits_str_orig, dataunits_str );
+#ifdef DEBUG
+	printf( "units string after stripping time zone: >%s<\n", dataunits_str );
+#endif
 
 	if( have_initted == 0 ) {
 #ifdef DEBUG
@@ -174,7 +205,7 @@ char *fuckyou;
 #ifdef DEBUG
 		fprintf( stderr, "utCalendar2_cal: getting origin day of data units\n" );
 #endif
-		get_origin( dataunits_str, dataunits, &y0, &mon0, &d0, &h0, &min0, &s0 );	/* Note: static vars */
+		get_origin( dataunits_str, &y0, &mon0, &d0, &h0, &min0, &s0 );	/* Note: static vars */
 #ifdef DEBUG
 		fprintf( stderr, "utCalendar2_cal: origin day for string >%s< is %d/%d/%d %d:%d:%f\n", 
 			dataunits_str, y0, mon0, d0, h0, min0, s0 );
@@ -367,10 +398,14 @@ int utInvCalendar2_cal( int year, int month, int day, int hour, int minute, doub
 		if( prev_user_unit_str != NULL ) {
 			free( prev_user_unit_str );
 			ut_free( prev_units );
+			prev_user_unit_str = NULL;
+			prev_units = NULL;
 			}
 
-		if( prev_calendar != NULL )
+		if( prev_calendar != NULL ) {
 			free( prev_calendar );
+			prev_calendar = NULL;
+			}
 
 		if( conv_days_to_user_units != NULL ) 
 			cv_free( conv_days_to_user_units );
@@ -382,7 +417,7 @@ int utInvCalendar2_cal( int year, int month, int day, int hour, int minute, doub
 			}
 
 		/* Get origin day of the data units */
-		get_origin( user_unit_str, user_unit, &y0, &mon0, &d0, &h0, &min0, &s0 );	/* Note: static vars */
+		get_origin( user_unit_str, &y0, &mon0, &d0, &h0, &min0, &s0 );	/* Note: static vars */
 
 		/* Convert the origin day to Julian Day number in the specified calendar */
 #ifdef DEBUG
@@ -518,11 +553,28 @@ static cv_converter *get_day_to_user_converter( ut_unit *uu, int y0, int mon0, i
  * The user specified some origin to the time units. For example, if the units string
  * were "days since 2005-10-15", then the origin date is 2005-10-15.  This routine
  * deduces the specified origin date from the passed units structure 
+ * 
+ * Note: this uses the udunits library. However it handles the time zone in a way I don't 
+ * like. It seems to calculate GMT dates, not local dates. So, for instance, if given
+ * the units string "hours since 2001-01-01 00:00:00 -8" it returns the origin date/time
+ * as "2001/1/1 8:0:0.000000", rather than what I want it to do, which is 2001/1/1 00:00.
+ * So, we strip any identifiable time zone info to start with, even before this routine
+ * is every called.
  */
-static void get_origin( const char *dataunits_str, ut_unit *dataunits, int *y0, int *mon0, int *d0, int *h0, int *min0, double *s0 )
+static void get_origin( const char *dataunits_str, int *y0, int *mon0, int *d0, int *h0, int *min0, double *s0 )
 {
-	double	tval, tval_conv, resolution;
+	double		tval, tval_conv, resolution;
 	cv_converter	*conv_user_date_to_ref_date;
+	ut_unit		*dataunits;
+
+#ifdef DEBUG
+	printf( "++++++++++++++ get_origin: entering with >%s<\n", dataunits_str );
+#endif
+
+	if( (dataunits = ut_parse( units_system, dataunits_str, UT_ASCII )) == NULL ) {
+		fprintf( stderr, "Error parsing units string \"%s\" -- are you sure it is a udunits2 library compatible time units specification?\n", dataunits_str );
+		exit(-1);
+		}
 
 	/* Get converter from these units to the library time units */
 	conv_user_date_to_ref_date = ut_get_converter( dataunits, udu_ref_date );
@@ -548,6 +600,11 @@ static void get_origin( const char *dataunits_str, ut_unit *dataunits, int *y0, 
 		}
 
 	cv_free( conv_user_date_to_ref_date );
+
+#ifdef DEBUG
+	printf( "---------- get_origin: leaving with origin date %d/%d/%d %d:%d:%lf\n",
+		*y0, *mon0, *d0, *h0, *min0, *s0 );
+#endif
 }
 
 /*========================================================================================*/
@@ -773,5 +830,51 @@ static void unknown_cal_emit_warning( const char *calendar_name )
 
 	strcpy( unknown_cal_emitted_warning_for[ n_unkcal ], calendar_name );
 	n_unkcal++;
+}
+
+/*=============================================================================================
+ */
+static void strip_timezone_info( const char *units_orig, char *out )
+{
+	/* As far as I understand, a timezone specification must look like this:
+	 * "hours since 1900-01-01 00:00 -8"
+	 * I.e., it must be contained in the fifth token. That token can be either
+	 * an integer or "GMT". 
+	 *
+	 * In any event, to strip the timezone info, this returns the input string
+	 * without the fifth token, if such a thing is present.
+	 */
+
+	char *ptr;
+	char *s = (char *)malloc( strlen( units_orig ) + 1 );
+	strcpy( s, units_orig );
+
+	/* First time thru, figure out how many tokens there are. If less than
+	 * 5, just return the original string. If more than 5, it's an error.
+	 * If exactly 5, we proceed to strip the fifth token 
+	 */
+
+	ptr = strtok( s, " " );
+	int ntoks = 0;
+	out[0] = '\0';
+	while( ptr != NULL ) {
+		ntoks++;
+		if( ntoks != 5 ) {
+			strcat( out, ptr );
+			}
+
+		if( ntoks > 5 ) {
+			fprintf( stderr, "utCalendar2_cal.c: strip_timezone_info: error, found > 5 tokens for this units string: %s\n",
+				units_orig );
+			exit( -1 );
+			}
+
+		ptr = strtok( NULL, " " );
+
+		if( ptr != NULL )
+			strcat( out, " " );
+		}
+
+	free( s );
 }
 

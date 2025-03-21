@@ -1,6 +1,6 @@
 /*
  * Ncview by David W. Pierce.  A visual netCDF file viewer.
- * Copyright (C) 1993 through 2010 David W. Pierce
+ * Copyright (C) 1993 through 2024 David W. Pierce
  *
  * This program  is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, Version 3, as 
@@ -16,9 +16,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * David W. Pierce
- * 6259 Caminito Carrena
- * San Diego, CA  92122
- * pierce@cirrus.ucsd.edu
+ * davidwilliampierce@gmail.com
  */
 
 
@@ -211,7 +209,7 @@ XtPointer call_data;
 	index = (size_t)list->list_index;
 	in_change_dat( index, new_val );
 	strcpy( *(list_text+list->list_index), line );
-	XawListChange( dataedit_list_widget, list_text, 0, 0, True );
+	XawListChange( dataedit_list_widget, (_Xconst char **)list_text, 0, 0, True );
 	XawListHighlight( dataedit_list_widget, list->list_index );
 }
 

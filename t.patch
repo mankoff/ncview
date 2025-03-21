@@ -1,0 +1,39 @@
+Description: Modernize autotools for clean autoreconf.
+ The issues in question:
+ .
+ configure.in:39: warning: AM_INIT_AUTOMAKE: two- and three-arguments forms are deprecated.  For more info, see:
+ configure.in:39: http://www.gnu.org/software/automake/manual/automake.html#Modernize-AM_005fINIT_005fAUTOMAKE-invocation
+ configure.in:33: installing './compile'
+ src/Makefile.am:21: warning: source file 'interface/interface.c' is in a subdirectory,
+ src/Makefile.am:21: but option 'subdir-objects' is disabled
+ automake: warning: possible forward-incompatibility.
+ automake: At least a source file is in a subdirectory, but the 'subdir-objects'
+ automake: automake option hasn't been enabled.  For now, the corresponding output
+ automake: object file(s) will be placed in the top-level directory.  However,
+ automake: this behaviour will change in future Automake versions: they will
+ automake: unconditionally cause object files to be placed in the same subdirectory
+ automake: of the corresponding sources.
+ automake: You are advised to start using 'subdir-objects' option throughout your
+ automake: project, to avoid future incompatibilities.
+Author: Bas Couwenberg <sebastic@debian.org>
+Forwarded: yes, mailto:dpierce@ucsd.edu
+
+--- a/configure.in
++++ b/configure.in
+@@ -36,7 +36,7 @@ AC_HEADER_STDC
+ 
+ 
+ AC_CONFIG_HEADER(config.h)
+-AM_INIT_AUTOMAKE([ncview],[ncview_version])
++AM_INIT_AUTOMAKE
+ 
+ AC_PATH_X
+ if test "x$no_x" == "xyes"; then
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -1,3 +1,5 @@
++AUTOMAKE_OPTIONS = subdir-objects
++
+ bin_PROGRAMS=ncview
+ noinst_PROGRAMS=geteuid
+ geteuid_SOURCES=geteuid.c

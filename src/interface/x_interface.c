@@ -1531,7 +1531,7 @@ void x_init_widgets_varsel_list( Widget parent )
 				widget_name,
 				labelWidgetClass,
 				*(var_selection_widget+which_box),
-				XtNwidth, app_data.varname_width,
+				XtNwidth, app_data.button_width,
 				XtNlabel, "Var:",
 				XtNborderWidth, 0,
 				NULL );
@@ -1546,6 +1546,7 @@ void x_init_widgets_varsel_list( Widget parent )
 				parent,
 				XtNorientation, XtorientHorizontal,
 				XtNborderWidth, 0,
+				XtNhorizDistance, -app_data.varname_width + app_data.button_width,
 				XtNfromVert, *(var_selection_widget + which_box - 1),
 				NULL);
 			snprintf( widget_name, 127, "varlist_label_%1d", which_box+1 );
@@ -2952,11 +2953,11 @@ void check_app_res( AppDataPtr ad )
 		exit( -1 );
 		}
 
-	if( (ad->varname_width > 500) ||
+	if( (ad->varname_width > 1024) ||
 	    (ad->varname_width < 10)   ) {
 		fprintf( stderr, "ncview: check_app_data: error in resource " );
 		fprintf( stderr, "file entry for varnameWidth.  Acceptable\n" );
-		fprintf( stderr, "range is 10 to 500\n" );
+		fprintf( stderr, "range is 10 to 1024\n" );
 		exit( -1 );
 		}
 

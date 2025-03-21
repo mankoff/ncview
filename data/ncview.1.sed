@@ -341,7 +341,7 @@ The width, in pixels, of the "variable" and "dimension"
 buttons.
 If you use long names for these, you might want to 
 increase this value.
-Default = 50.
+Default = 55.
 .TP
 .B nVarsPerRow
 The number of variable buttons in a row before

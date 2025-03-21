@@ -1557,7 +1557,7 @@ void x_init_widgets_varsel_list( Widget parent )
 				XtNstate, state,
 				XtNlabel, var->name,
 				XtNsensitive, True,
-				XtNwidth, app_data.varlabel_width,
+				XtNwidth, app_data.button_width,
 				NULL );
 		else
 			*(varlist_widget+i) = XtVaCreateManagedWidget(
@@ -1568,7 +1568,7 @@ void x_init_widgets_varsel_list( Widget parent )
 				XtNstate, state,
 				XtNlabel, var->name,
 				XtNsensitive, True,
-				XtNwidth, app_data.varlabel_width,
+				XtNwidth, app_data.button_width,
 				NULL );
 		if( (n_vars > 1) && app_data.var_colors && options.color_by_ndims ) {
 			switch( var->effective_dimensionality ) {

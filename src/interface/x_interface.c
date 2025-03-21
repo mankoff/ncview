@@ -39,6 +39,7 @@
 #endif
 
 #define DEFAULT_BUTTON_WIDTH	55
+#define DEFAULT_VARNAME_WIDTH	55
 #define DEFAULT_LABEL_WIDTH	400
 #define DEFAULT_DIMLABEL_WIDTH	95
 #define DEFAULT_VARLABEL_WIDTH	95
@@ -58,6 +59,8 @@
 #define XtCVarLabelWidth 	"VarLabelWidth"
 #define XtNbuttonWidth 		"buttonWidth"
 #define XtCButtonWidth		"ButtonWidth"
+#define XtNvarnameWidth 	"varnameWidth"
+#define XtCVarnameWidth		"VarnameWidth"
 #define XtNnVarsPerRow		"nVarsPerRow"
 #define XtCNVarsPerRow		"NVarsPerRow"
 #define XtNdeltaStep		"deltaStep"
@@ -91,6 +94,7 @@ typedef struct {
 	int	varlabel_width;		/* as above, but for variable labls */
 	int	blowup_default_size;	/* default size, in pixels, of newly opened windows */
 	int	button_width;		/* width of the control buttons */
+	int	varname_width;		/* width of the variable name buttons */
 	int	n_vars_per_row;		/* how many vars in one row before
 					 * we start another.
 					 */
@@ -268,6 +272,15 @@ static XtResource resources[] = {
 	XtOffset( AppDataPtr, button_width ),
 	XtRImmediate,
 	(XtPointer)DEFAULT_BUTTON_WIDTH,
+    },
+    {
+	XtNvarnameWidth, 
+	XtCVarnameWidth,
+	XtRInt,
+	sizeof( int ),
+	XtOffset( AppDataPtr, varname_width ),
+	XtRImmediate,
+	(XtPointer)DEFAULT_VARNAME_WIDTH,
     },
     {
 	XtNnVarsPerRow, 
@@ -1518,7 +1531,7 @@ void x_init_widgets_varsel_list( Widget parent )
 				widget_name,
 				labelWidgetClass,
 				*(var_selection_widget+which_box),
-				XtNwidth, app_data.button_width,
+				XtNwidth, app_data.varname_width,
 				XtNlabel, "Var:",
 				XtNborderWidth, 0,
 				NULL );
@@ -1540,7 +1553,7 @@ void x_init_widgets_varsel_list( Widget parent )
 				widget_name,
 				labelWidgetClass,
 				*(var_selection_widget+which_box),
-				XtNwidth, app_data.button_width,
+				XtNwidth, app_data.varname_width,
 				XtNborderWidth, 0,
 				XtNlabel, "",
 				NULL );
@@ -1557,7 +1570,7 @@ void x_init_widgets_varsel_list( Widget parent )
 				XtNstate, state,
 				XtNlabel, var->name,
 				XtNsensitive, True,
-				XtNwidth, app_data.button_width,
+				XtNwidth, app_data.varname_width,
 				NULL );
 		else
 			*(varlist_widget+i) = XtVaCreateManagedWidget(
@@ -1568,7 +1581,7 @@ void x_init_widgets_varsel_list( Widget parent )
 				XtNstate, state,
 				XtNlabel, var->name,
 				XtNsensitive, True,
-				XtNwidth, app_data.button_width,
+				XtNwidth, app_data.varname_width,
 				NULL );
 		if( (n_vars > 1) && app_data.var_colors && options.color_by_ndims ) {
 			switch( var->effective_dimensionality ) {
@@ -2935,6 +2948,14 @@ void check_app_res( AppDataPtr ad )
 	    (ad->button_width < 10)   ) {
 		fprintf( stderr, "ncview: check_app_data: error in resource " );
 		fprintf( stderr, "file entry for buttonWidth.  Acceptable\n" );
+		fprintf( stderr, "range is 10 to 500\n" );
+		exit( -1 );
+		}
+
+	if( (ad->varname_width > 500) ||
+	    (ad->varname_width < 10)   ) {
+		fprintf( stderr, "ncview: check_app_data: error in resource " );
+		fprintf( stderr, "file entry for varnameWidth.  Acceptable\n" );
 		fprintf( stderr, "range is 10 to 500\n" );
 		exit( -1 );
 		}

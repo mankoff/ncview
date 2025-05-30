@@ -209,7 +209,7 @@ XtPointer call_data;
 	index = (size_t)list->list_index;
 	in_change_dat( index, new_val );
 	strcpy( *(list_text+list->list_index), line );
-	XawListChange( dataedit_list_widget, (_Xconst char **)list_text, 0, 0, True );
+	XawListChange( dataedit_list_widget, (char **)list_text, 0, 0, True );
 	XawListHighlight( dataedit_list_widget, list->list_index );
 }
 

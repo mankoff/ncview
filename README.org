@@ -1,0 +1,20 @@
+
+* Developer build instructions
+
+#+BEGIN_SRC bash
+## TODO: Get working from here
+# aclocal -I m4macros
+# autoreconf -fi -I m4macros
+
+CC=/usr/bin/cc \
+  CFLAGS="-O0 -g3 -ggdb -fno-omit-frame-pointer" \
+  ./configure
+
+## Different configure example
+# ./configure --prefix=$HOME --with-udunits2_incdir=/home/pierce/src/packages/data/udunits/udunits-2.1.11/install/include --with-udunits2_libdir=/home/pierce/src/packages/data/udunits/udunits-2.1.11/install/lib --with-nc-config=/home/pierce/src/packages/data/netcdf/netcdf-c-4.3.2/install/bin/nc-config
+
+make clean
+make
+# file src/ncview # look for "not stripped"
+gdb --args ./src/ncview -repl foo.nc
+#+END_SRC

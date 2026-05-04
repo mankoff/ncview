@@ -95,12 +95,12 @@ main( int argc, char **argv )
 	else
 		found_state_file = FALSE;
 
+	options.blowup       = DEFAULT_BLOWUP;
 	in_parse_args               ( &argc, argv );
 	input_files = parse_options ( argc,  argv );	/* This parses ALL the non-X11 command line options, not just the input files */
 	determine_file_type         ( input_files );
 
 	options.window_title = input_files->string;
-	options.blowup       = 1;
 
 	/* this routine sets up the 'variables' structure */
 	initialize_file_interface   ( input_files );
@@ -254,6 +254,11 @@ parse_options( int argc, char *argv[] )
 
 			else if( strncmp( argv[i], "-repl", 5) == 0 )
 				options.blowup_type = BLOWUP_REPLICATE;
+
+			else if( strncmp( argv[i], "-blowup", 7) == 0 ) {
+                                sscanf( argv[i+1], "%d", &(options.blowup) );
+				i++;
+                                }
 
 			else if( strncmp( argv[i], "-c", 2 ) == 0 ) {
 				print_copying();
@@ -800,6 +805,7 @@ fprintf( stderr, "	-frames: Dump out PNG images (to make a movie, for instance)\
 fprintf( stderr, "	-nc: 	Specify number of colors to use.\n" );
 fprintf( stderr, "	-no1d: 	Do NOT allow 1-D variables to be displayed.\n" );
 fprintf( stderr, "	-repl: 	Set default blowup type to replicate rather than bilinear.\n" );
+fprintf( stderr, "	-blowup: Set default window blowup scale factor.\n" );
 fprintf( stderr, "	-calendar: Specify time calendar to use, overriding value in file. Known: noleap standard gregorian 365_day 360_day.\n" );
 fprintf( stderr, "	-private: Use a private colormap.\n" );
 fprintf( stderr, "	-debug: Print lots of debugging info.\n" );

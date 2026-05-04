@@ -253,7 +253,7 @@ parse_options( int argc, char *argv[] )
 				options.shrink_method = SHRINK_METHOD_MODE;
 
 			else if( strncmp( argv[i], "-repl", 5) == 0 )
-				options.blowup = BLOWUP_REPLICATE;
+				options.blowup_type = BLOWUP_REPLICATE;
 
 			else if( strncmp( argv[i], "-c", 2 ) == 0 ) {
 				print_copying();

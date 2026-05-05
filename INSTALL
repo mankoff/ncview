@@ -25,6 +25,14 @@ Short version of installation instructions, presuming everything goes well:
 	2) make
 	3) make install 
 
+If 'configure' complains about a compiler, or you want to run in debug mode
+with gdb, you can tri:
+
+CC=/usr/bin/cc \
+  CFLAGS="-O0 -g3 -ggdb -fno-omit-frame-pointer" \
+  ./configure
+
+And then run the built version with: gdb --args ./src/ncview /path/to/file.nc
 
 Medium version of installation instructions, presuming a few directories
 are in unusual locations:

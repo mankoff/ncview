@@ -229,10 +229,10 @@ void x_check_legal_colormap_loaded()
 	n_cm_saved = stringlist_len( read_in_state );
 	n_cm_prog  = x_n_colormaps( colormap_list );
 	n_cm_max   = n_cm_saved + n_cm_prog;		/* max possible colormaps we could have */
-	if( n_cm_max > 200 ) {
-		fprintf( stderr, "Error, too many colormaps -- max is 200\n" );
-		exit(-1);
-		}
+	/* if( n_cm_max > 200 ) { */
+	/* 	fprintf( stderr, "Error, too many colormaps -- max is 200\n" ); */
+	/* 	exit(-1); */
+	/* 	} */
 	if( n_cm_max < 1 ) {
 		fprintf( stderr, "Internal error -- n_cm_max == 0?!?\n" );
 		exit(-1);

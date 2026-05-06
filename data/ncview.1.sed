@@ -3,7 +3,7 @@
 ncview \- graphically display netCDF files under X windows
 .SH SYNOPSIS
 .B ncview
-[\-beep] [\-copying] [\-frames] [\-warranty] [\-private] [\-ncolors XX] [\-extrainfo] [\-mtitle "title"] [\-minmax fast | med | slow | all] datafiles ...
+[\-beep] [\-copying] [\-frames] [\-warranty] [\-private] [\-ncolors XX] [\-extrainfo] [\-mtitle "title"] [\-minmax fast | med | slow | all] [\-maxsize PCT \-or\- WIDTH,HEIGHT] datafiles ...
 .PP
 .SH DESCRIPTION
 .I Ncview
@@ -230,11 +230,12 @@ and maximum values directly.
 2) Click with the right mouse button on the "range" button.
 This scales the displayed data to the currently shown frame.
 3) Click with the left mouse button on a data point in the
-color-contour window; this will set the minimum scaling to
-the value of the data which you clicked on.
+color-contour window while holing the Control key;
+this will set the minimum scaling to the value of the data which
+you clicked on.
 4) Click with the right mouse button on a data point in the
-color-contour window; this will set the maximum scaling to
-the value of the data which you clicked on.
+color-contour window while holding the Control; this will set the
+maximum scaling to the value of the data which you clicked on.
 .PP
 .SH OPTIONS
 .I -beep:
@@ -283,6 +284,23 @@ If
 .I all,
 then every time entry is examined for extrema.
 Default is "fast".
+.PP
+.I -maxsize:
+determines the maximum size that the color contour window
+is allowed to grow to until scrollbars are added and no
+more growing is allowed.
+If a single integer is given, then that is the percentage
+of the screen that the window is allowed to grow to.
+This is taken as the smaller of your display's width and
+height.
+So, for example, for -maxsize 75, in the typical case that
+your display is wider than it is tall, the window is allowed
+to grow up to 75% of the height of your display.
+If two integers separated by a comma are given, these are
+the actual width and height that the window is allowed
+to grow to; for example, -maxsize 800,600 will allow the
+window to grow to a maximum width of 800 pixels and a maximum
+height of 600 pixels.
 .PP
 .I -copying:
 prints out the terms under which 

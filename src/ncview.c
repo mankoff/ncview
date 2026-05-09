@@ -105,6 +105,12 @@
 #include "colormaps_vikO.h"
 #include "colormaps_viridis.h"
 
+/* Colormaps that were in 2.1.11 but not #included" */
+#include "colormaps_blue_red.h"
+#include "colormaps_jaisn2.h"
+#include "colormaps_jaison.h"
+#include "colormaps_roullet.h"
+
 /* A. Shchepetkin: new colormaps are added here */
 #include "colormaps_bright.h"
 #include "colormaps_banded.h"

@@ -7,12 +7,6 @@ ncview_LDADD=$(PNG_LIBS) $(UDUNITS2_LDFLAGS) -lm $(NETCDF_LDFLAGS) $(XAW_LIBS) $
 headers = ncview.bitmaps.h ncview.includes.h             \
           ncview.defines.h ncview.protos.h               \
           utCalendar2_cal.h SciPlot.h SciPlotP.h 	 \
-          colormaps_3gauss.h colormaps_bw.h              \
-          colormaps_detail.h colormaps_helix2.h          \
-          colormaps_hotres.h colormaps_3saw.h            \
-          colormaps_default.h colormaps_extrema.h        \
-          colormaps_helix.h colormaps_ssec.h             \
-          overlay_coasts_p08deg.h overlay_coasts_p8deg.h \
           overlay_usa.h interface/closed_circle_bitmap.h \
           interface/open_circle_bitmap.h \
           interface/fallback_resources.h interface/RadioWidget.h \
